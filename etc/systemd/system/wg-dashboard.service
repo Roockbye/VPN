@@ -1,0 +1,18 @@
+```
+[Unit]
+Description=WG Dashboard Service
+After=netword.service
+#ConditionPathIsDirectory=/etc/wireguard
+
+[Service]
+WorkingDirectory=/root/wgdashboard/src
+ExecStart=/usr/bin/python3 /root/wgdashboard/src/dashboard.py
+#ExecStart=/usr/local/bin/gunicorn --workers 3 --bind 0.0.0.0:10086 dashboard:app
+Restart=always
+User=root
+#RestartSec=5
+#StartLimitInterval=1
+
+[Install]
+WantedBy=multi-user.target
+```
