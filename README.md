@@ -671,3 +671,194 @@ Logs Netdata : Vérifiez également les logs de Netdata pour des erreurs potenti
 ```
 sudo journalctl -xeu netdata.service
 ```
+
+10. Sécurité
+
+Protection par Pare-feu
+Utiliser UFW pour configurer le pare-feu
+
+Installer UFW (si ce n'est pas déjà fait) :
+
+```
+sudo apt-get install ufw
+```
+
+Configurer UFW pour permettre SSH, HTTP, et HTTPS :
+
+```
+sudo ufw allow OpenSSH
+sudo ufw allow 'Nginx Full'
+```
+
+Activer UFW :
+
+```
+sudo ufw enable
+```
+
+Vérifier le statut d'UFW :
+
+```
+sudo ufw status
+```
+
+Utiliser Fail2Ban pour protéger contre les tentatives de connexion brutale
+
+Installer Fail2Ban :
+
+```
+sudo apt-get install fail2ban
+```
+
+Configurer Fail2Ban pour protéger Nginx :
+
+Créer un fichier de configuration pour Nginx :
+
+```
+sudo nano /etc/fail2ban/jail.local
+```
+
+Ajouter la configuration suivante :
+
+```
+    [nginx-http-auth]
+    enabled = true
+    filter = nginx-http-auth
+    action = iptables[name=HTTP, port=http, protocol=tcp]
+    logpath = /var/log/nginx/error.log
+    maxretry = 3
+```
+
+Redémarrer Fail2Ban :
+
+```
+sudo systemctl restart fail2ban
+```
+
+Mise à Jour et Sécurisation Système
+Garder le Système à Jour
+
+Mettre à jour les paquets :
+
+```
+sudo apt-get update
+sudo apt-get upgrade
+```
+
+Configurer les mises à jour automatiques :
+
+Installer le package :
+
+```
+sudo apt-get install unattended-upgrades
+```
+
+Activer les mises à jour automatiques :
+
+```
+sudo dpkg-reconfigure --priority=low unattended-upgrades
+```
+
+Sécuriser SSH
+
+Changer le port par défaut de SSH (optionnel mais recommandé) :
+
+Éditez le fichier de configuration SSH :
+
+```
+sudo nano /etc/ssh/sshd_config
+```
+
+Changez le port par défaut de 22 à quelque chose de différent (par exemple 2222) :
+
+```
+Port 2222
+```
+
+Redémarrer le service SSH :
+
+```
+sudo systemctl restart ssh
+```
+
+Désactiver l'authentification par mot de passe (utiliser des clés SSH) :
+
+Dans /etc/ssh/sshd_config :
+
+```
+PasswordAuthentication no
+```
+
+Redémarrer le service SSH :
+
+```
+sudo systemctl restart ssh
+```
+
+11. Axes d'amélioration:
+
+Sécurisation de Nginx
+
+Utiliser HTTPS avec Certbot et Let's Encrypt
+
+Installer Certbot :
+
+```
+sudo apt-get update
+sudo apt-get install certbot python3-certbot-nginx
+```
+Obtenir et Installer un certificat SSL :
+
+```
+sudo certbot --nginx -d nom_de_domaine
+```
+Renouvellement Automatique :
+
+Certbot configure automatiquement un renouvellement automatique. Vous pouvez vérifier avec :
+
+```
+sudo certbot renew --dry-run
+```
+Renforcer la Configuration Nginx
+
+Éditez votre fichier de configuration Nginx pour utiliser SSL :
+
+```
+sudo nano /etc/nginx/sites-available/netdata
+```
+Ajouter les configurations suivantes pour forcer HTTPS :
+
+```
+server {
+    listen 80;
+    server_name nom_de_domaine;
+    return 301 https://$host$request_uri;
+}
+```
+```
+server {
+    listen 443 ssl;
+    server_name nom_de_domaine;
+
+    ssl_certificate /etc/letsencrypt/live/nom_de_domaine/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/nom_de_domaine/privkey.pem;
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+
+    location / {
+        proxy_pass http://localhost:19999;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        auth_basic "Restricted Content";
+        auth_basic_user_file /etc/nginx/.htpasswd;
+    }
+}
+```
+
+Redémarrer Nginx :
+
+```
+sudo systemctl restart nginx
+```
