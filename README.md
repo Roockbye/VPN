@@ -445,6 +445,85 @@ Maintenant, vous pouvez accéder à Netdata en utilisant l'adresse IP de votre s
 
 [dashboard netdata](./netdata.png)
 
+Alerte Discord
+
+[alerte](./alerte.png)
+
+Install:
+```
+sudo apt-get install stress
+```
+```
+sudo apt-get install stress-ng
+```
+
+Sur Discord (obligatoirement un serveur discord dont vous avez les droits)
+ --> dans Paramètres --> Intégrations --> Webhook --> Créer un webhook
+
+Nous copierons son lien dans notre fichier de configuration : /etc/netdata/health_alarm_notify.conf
+
+```
+SEND_DISCORD="YES"
+DISCORD_WEBHOOK_URL="lien du webhook"
+DEFAULT_RECIPIENT_DISCORD="alerte" #nom de mon canal
+```
+Dans le fichier /etc/netdata/netdata.conf, rajouter:
+```
+[health]
+    enabled = yes
+```
+
+Pour forcer l'envoi d'une notification de test, vous pouvez utiliser le script de notification intégré de Netdata :
+
+```
+sudo /usr/libexec/netdata/plugins.d/alarm-notify.sh test
+```
+
+Assurez-vous que vous avez une règle d'alerte configurée pour la charge CPU dans Netdata. Dans /etc/netdata/health.d/cpu.conf:
+
+```
+template: 100c_5min_cpu_usage
+      on: system.cpu
+    calc: $user + $system + $softirq
+   every: 10s
+    units: %
+    warn: $this > 75
+    crit: $this > 90
+   delay: up 1m for 5m, down 1m for 5m
+    info: the CPU utilization is too high
+      to: discord
+```
+
+Pour tester l'envoi de notifications Discord, vous pouvez créer une alerte personnalisée temporaire dans Netdata. Par exemple, dans /etc/netdata/health.d/custom_test.conf :
+
+```
+template: custom_test
+      on: system.cpu
+    calc: $user + $system + $softirq
+   every: 10s
+    units: %
+    warn: $this > 10
+    crit: $this > 20
+   delay: up 1m for 5m, down 1m for 5m
+    info: this is a test alert
+      to: discord
+```
+
+Ensuite, redémarrez Netdata :
+
+```
+sudo systemctl restart netdata
+```
+
+Commande de stress pour déclencher des alertes:
+```
+stress-ng --cpu 8 --cpu-load 100 --timeout 60s --metrics-brief
+```
+ou (plus violent)
+```
+stress-ng --cpu 8 --cpu-load 100 --vm 2 --vm-bytes 80% --io 4 --hdd 2 --timeout 120s --metrics-brief
+```
+
 7. Authentification des utilisateurs (si vous désirez le faire manuellement)
 
 Création de configurations clients
